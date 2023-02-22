@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 import time
+import random
 
 class Bird:
 
@@ -78,17 +79,76 @@ class Bird:
         return pygame.mask.from_surface(self.img)  
 
 class Pipe:
-    def __init__(self,parent_screen):
-        self.image = pygame.image.load("resources/pipe.png")
-        self.image = pygame.transform.scale(self.image,(70,510))
+    GAP = 200
+    VEL= 5
+    PIPE_IMG = pygame.transform.scale2x(pygame.image.load("resources/pipe.png"))
+
+    def __init__(self,parent_screen,x):
+        self.PIPE_TOP= pygame.transform.flip(self.PIPE_IMG,False,True);
+        self.PIPE_BOTTOM = self.PIPE_IMG
+        self.parent_screen = parent_screen
+        self.x= x
+        self.height= 0
+        self.top = 0
+        self.bottom=0
+        self.passed = False
+        self.set_height();
+        
+    def set_height(self):
+        self.height = random.randrange(50,450);
+        self.top = self.height- self.PIPE_TOP.get_height()
+        self.bottom = self.height + self.GAP;
+    
+    def move(self):
+        self.x -= self.VEL
+
+    def draw(self):
+        self.parent_screen.blit(self.PIPE_TOP,(self.x,self.top))
+        self.parent_screen.blit(self.PIPE_BOTTOM,(self.x,self.bottom))
+
+    def collide(self,bird):
+        bird_mask = bird.get_mask();
+        top_mask = pygame.mask.from_surface(self.PIPE_TOP)
+        bottom_mask = pygame.mask.from_surface(self.PIPE_BOTTOM)
+        top_offset = (self.x-bird.x,self.top-round(bird.y))
+        bottom_offset = (self.x-bird.x,self.bottom-round(bird.y))
+
+        b_point = bird_mask.overlap(bottom_mask,bottom_offset)
+        t_point = bird_mask.overlap(top_mask,top_offset)
+
+        if b_point or t_point:
+            return True
+        
+        return False
+    
+class Base:
+    VEL = 5
+    IMG= pygame.image.load("resources/base.png")
+    WIDTH= IMG.get_width()
+
+    def __init__(self,parent_screen,y):
+        self.y= y
+        self.x1 = 0
+        self.x2 = self.WIDTH
         self.parent_screen = parent_screen
 
-    def draw(self,x,y):
-        self.parent_screen.blit(self.image,(x,y))
-        reverseImg=pygame.transform.flip(self.image,False,True)
-        self.parent_screen.blit(reverseImg,(x,y+640))
-        pygame.display.update()
+    def move(self):
+        self.x1-= self.VEL
+        self.x2-=self.VEL
+        if self.x1 + self.WIDTH<0:
+            self.x1=self.x2 + self.WIDTH
 
+        if self.x2 + self.WIDTH<0:
+            self.x2=self.x1 + self.WIDTH
+
+    def draw(self):
+        self.parent_screen(self.IMG,(self.x1,self.y))
+        self.parent_screen(self.IMG,(self.x2,self.y))
+
+def blitRotateCenter(surf,image,topleft,angle):
+    rotated_image = pygame.transform.rotate(image,angle)
+    new_rect = rotated_image.get_rect(center = image.get_rect(topleft= topleft).center)
+    surf.blit(rotated_image,new_rect.topleft)
 
 class Game:
     def __init__(self):
